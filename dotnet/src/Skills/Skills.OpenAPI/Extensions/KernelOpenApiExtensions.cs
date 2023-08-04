@@ -299,14 +299,14 @@ public static class KernelOpenApiExtensions
         if (operation.Payload?.Properties != null)
         {
             List<string> propertiesDescription = new();
-            var payloadDescription = KernelOpenApiExtensions.ExtractProperty(operation.Payload.Properties, ref propertiesDescription);
+            var payloadDescription = KernelOpenApiExtensions.ExtractProperties(operation.Payload.Properties, ref propertiesDescription);
             if (payloadDescription != null && payloadDescription.Count > 0)
             {
                 var payloadJsonSample = JsonConvert.SerializeObject(payloadDescription, Formatting.None);
-                var payloadParameter = parameters.FirstOrDefault(x => x.Name == "payload" || x.Name == "payload");
+                var payloadParameter = parameters.FirstOrDefault(x => x.Name == "payload");
 
                 // Aggregate JSON properties descriptions
-                var payloadJsonDescription = string.Join("\n        ", propertiesDescription);
+                var payloadJsonDescription = string.Join(PayloadDescriptionSeperator, propertiesDescription);
 
                 if (payloadParameter != null)
                 {
@@ -314,7 +314,7 @@ public static class KernelOpenApiExtensions
                     parameters.Add(new ParameterView
                     {
                         Name = payloadParameter.Name,
-                        Description = payloadParameter.Description + "\n        " + payloadJsonDescription,
+                        Description = $"{payloadParameter.Description}{PayloadDescriptionSeperator}{payloadJsonDescription}",
                         DefaultValue = payloadJsonSample
                     });
                 }
@@ -331,6 +331,8 @@ public static class KernelOpenApiExtensions
 
         return kernel.RegisterCustomFunction(function);
     }
+
+    private const string PayloadDescriptionSeperator = "\n\t";
 
     /// <summary>
     /// Converts operation id to valid SK Function name.
@@ -371,7 +373,7 @@ public static class KernelOpenApiExtensions
     /// </summary>
     private static readonly Regex s_removeInvalidCharsRegex = new("[^0-9A-Za-z_]");
 
-    private static Dictionary<string, object>? ExtractProperty(IList<RestApiOperationPayloadProperty> properties, ref List<string> propertiesDescription, string parentPath = "")
+    private static Dictionary<string, object>? ExtractProperties(IList<RestApiOperationPayloadProperty> properties, ref List<string> propertiesDescription, string parentPath = "")
     {
         if (properties == null)
         {
@@ -387,7 +389,7 @@ public static class KernelOpenApiExtensions
             if (item.Type == "object")
             {
 #pragma warning disable CS8604 // Possible null reference argument.
-                jsonProperties.Add(item.Name, KernelOpenApiExtensions.ExtractProperty(item.Properties, ref propertiesDescription, propertyPath));
+                jsonProperties.Add(item.Name, KernelOpenApiExtensions.ExtractProperties(item.Properties, ref propertiesDescription, propertyPath));
 #pragma warning restore CS8604 // Possible null reference argument.
             }
             else
